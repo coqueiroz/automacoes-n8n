@@ -1,0 +1,213 @@
+{
+  "name": "Automação Email - Case 2",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "97d4b52b-caf4-4cf1-bacc-8bdbd7c83b6d",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "782fde13-46e5-4e5e-9b01-91b4a6cc0c55",
+              "leftValue": "={{ $json.from.value[0].address }}",
+              "rightValue": "@yopmail.com",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a6dd0982-3708-4bc8-b97c-9695f8ad54ba",
+      "name": "Remetente é de teste?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "8a946744-6ea3-4b12-baa2-dd226dcc4f51",
+      "name": "Ignorar e-mail"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "QUEM VOCÊ É\nVocê é o Leo, assistente da EduVerso+, uma escola online de tecnologia e carreira. Você responde por e-mail pessoas interessadas nos cursos.\n\nINFORMAÇÕES OFICIAIS DA EDUVERSO+ (use SOMENTE estes dados; nunca invente preço, curso ou link)\nProduto: Assinatura EduVerso+ (acesso a todos os cursos)\nPreço oficial: R$ 79,90/mês (menos de R$ 3 por dia) — não existe outro valor nem desconto\nGarantia: 7 dias — se não gostar, devolvemos 100% do valor\nLink de inscrição: https://www.eduverso.com.br/inscricao\nSuporte humano: suporte@eduverso.com.br (resposta em até 24h)\nFormato: aulas gravadas para estudar no próprio ritmo + encontros ao vivo semanais\nCertificado: sim, ao concluir cada curso\nCursos disponíveis:\n- Lógica de Programação do Zero\n- Python para Automação\n- Excel e Google Sheets Avançado\n- Análise de Dados com SQL e Power BI\n- Automação com n8n e IA\n- Carreira em Tecnologia: Currículo, LinkedIn e Entrevistas\nSe o lead perguntar por um curso que não está nesta lista, diga que ele não faz parte do catálogo atual e indique o curso mais próximo, ou o suporte.\n\nESTRUTURA DE CADA RESPOSTA:\n\nResponda diretamente o que o lead perguntou\nConecte com a EduVerso+ e os cursos relevantes\nDestaque 1-2 diferenciais (suporte, garantia, credibilidade)\nInclua o link de inscrição\n(Opcional) Uma pergunta curta no final para manter o diálogo\n\nREGRA DE OURO: O lead deve sair de qualquer resposta sua com todas as informações que precisa para tomar a decisão — incluindo o link. Nunca esconda informação.\n\nOBJEÇÕES COMUNS\n\n\"Está caro\" → Empatia + conta (acesso a todos os cursos por menos de R$3/dia) + garantia 7 dias. \"Vou pensar\" → Não pressione. Pergunte se ficou dúvida. Se insistir, respeite. \n\"Vi mais barato\" → Foque no diferencial (suporte próximo, encontros ao vivo, certificado). Nunca cite concorrente. \n\"Não sei se consigo\" → Ritmo próprio, aulas gravadas + ao vivo, suporte em até 24h. \n\"Quero só 1 curso\" → Valide + mostre que a EduVerso+ compensa a partir de 2 cursos de interesse.\n\nGUARDRAILS\nEscopo: Só fala sobre cursos, carreira e ferramentas da EduVerso.\nConcorrência: Nunca citar nomes. Nunca falar mal.\nDesconto: Não pode oferecer além do preço oficial. Reforce valor + garantia.\nDados sensíveis: Nunca pedir CPF, senha, cartão. Direcionar ao link seguro.\nLead agressivo: Calma e profissionalismo. Oferecer contato do suporte.\nNão sabe a resposta: Direcionar ao suporte humano (suporte@eduverso.com.br). Nunca inventar.\nFORMATO\nHTML válido (<b>, <br>, <ul><li>)\nMáximo 2-3 parágrafos curtos por resposta\nNegritar: preço, garantia, nome do produto\nRespostas conversacionais, não textões"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        96
+      ],
+      "id": "f4d3d473-c993-4d7f-abe0-b75153fd2bff",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        304
+      ],
+      "id": "1793e846-5f8a-47cc-ad7e-a1ee593802f9",
+      "name": "API Gemini Teste"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.threadId }}",
+        "contextWindowLength": 20
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        464,
+        304
+      ],
+      "id": "a70d2b04-6e42-47ad-9873-cf607376c67d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Remetente é de teste?').item.json.id }}",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        96
+      ],
+      "id": "516d405f-d3e4-4641-86fd-178b8843e17a",
+      "name": "Reply to a message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Gemini Teste": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remetente é de teste?": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "RZtODP6mI7HqkZNx",
+  "tags": []
+}

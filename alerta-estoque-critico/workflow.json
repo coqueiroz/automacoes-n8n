@@ -1,0 +1,189 @@
+{
+  "name": "Análise de Estoque Crítico",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e0e9603d-68b6-45c1-b1a7-f01fd4ec8cec",
+      "name": "Todo dia às 9h"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/SEU_ID_AQUI"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Estoque"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "33ec6fe8-0ddd-4745-b655-764abbd5702e",
+      "name": "Ler planilha de estoque",
+      "notes": "Colunas esperadas: Produto | SKU | Quantidade | Estoque Minimo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normaliza os números (aceita \"1.234,5\" e \"12\") e separa os itens críticos\nconst num = (v) => {\n  if (typeof v === 'number') return v;\n  const n = Number(String(v ?? '').replace(/\\./g, '').replace(',', '.').trim());\n  return Number.isFinite(n) ? n : null;\n};\n\nconst criticos = [];\nconst invalidos = [];\n\nfor (const item of $input.all()) {\n  const r = item.json;\n  const qtd = num(r['Quantidade']);\n  const min = num(r['Estoque Minimo']);\n  if (!r['Produto']) continue;                       // linha vazia\n  if (qtd === null || min === null) { invalidos.push(r['Produto']); continue; }\n  if (qtd <= min) {\n    criticos.push({\n      produto: r['Produto'],\n      sku: r['SKU'] || '-',\n      quantidade: qtd,\n      minimo: min,\n      faltam: Math.max(min - qtd, 0),\n      zerado: qtd <= 0,\n    });\n  }\n}\n\n// Zerados primeiro, depois os que estão mais abaixo do mínimo\ncriticos.sort((a, b) => (b.zerado - a.zerado) || (b.faltam - a.faltam));\n\nconst linhas = criticos.map(c =>\n  `<tr${c.zerado ? ' style=\"background:#fde2e2\"' : ''}>` +\n  `<td>${c.produto}</td><td>${c.sku}</td><td align=\"right\">${c.quantidade}</td>` +\n  `<td align=\"right\">${c.minimo}</td><td align=\"right\"><b>${c.faltam}</b></td></tr>`\n).join('');\n\nconst hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });\nconst zerados = criticos.filter(c => c.zerado).length;\n\nlet html = `<p>Relatório de estoque de <b>${hoje}</b>: <b>${criticos.length}</b> item(ns) no mínimo ou abaixo dele` +\n  (zerados ? `, sendo <b>${zerados}</b> zerado(s)` : '') + `.</p>` +\n  `<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px\">` +\n  `<tr style=\"background:#eeeeee\"><th>Produto</th><th>SKU</th><th>Qtd. atual</th><th>Mínimo</th><th>Faltam</th></tr>` +\n  linhas + `</table>`;\n\nif (invalidos.length) {\n  html += `<p style=\"color:#a15c00\">Atenção: não foi possível ler a quantidade ou o mínimo de: ${invalidos.join(', ')}.</p>`;\n}\n\nreturn [{ json: {\n  total: criticos.length,\n  zerados,\n  assunto: `Estoque crítico: ${criticos.length} item(ns) precisam de reposição (${hoje})`,\n  html,\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "114ed475-db6e-4b0d-85ff-5138ee17c96f",
+      "name": "Identificar itens críticos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dbd570af-de5c-4736-8973-08c5dbffcb07",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "d49bbbd3-42b6-49bb-9fc9-3545db5698af",
+      "name": "Tem item crítico?"
+    },
+    {
+      "parameters": {
+        "sendTo": "responsavel.compras@exemplo.com",
+        "subject": "={{ $json.assunto }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "26f69821-dd6e-454c-ad19-a987d889a7e1",
+      "name": "Enviar alerta por e-mail",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        896,
+        96
+      ],
+      "id": "64f5eaa1-afb4-494a-8439-ae0c2cd511d2",
+      "name": "Estoque OK (nada a fazer)"
+    }
+  ],
+  "connections": {
+    "Todo dia às 9h": {
+      "main": [
+        [
+          {
+            "node": "Ler planilha de estoque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler planilha de estoque": {
+      "main": [
+        [
+          {
+            "node": "Identificar itens críticos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar itens críticos": {
+      "main": [
+        [
+          {
+            "node": "Tem item crítico?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem item crítico?": {
+      "main": [
+        [
+          {
+            "node": "Enviar alerta por e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Estoque OK (nada a fazer)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": null,
+  "active": false
+}
